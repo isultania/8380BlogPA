@@ -14,6 +14,7 @@ from .serializers import CustomerSerializer
 from django.http import HttpResponse
 from django.views.generic import View
 from .utils import render_to_pdf
+from django.template import loader
 
 
 
@@ -174,17 +175,16 @@ def portfolio(request,pk):
        sum_current_stocks_value += stock.current_stock_value()
        sum_of_initial_stock_value += stock.initial_stock_value()
 
-   if request.method == "POST":
-       pdf = render_to_pdf('portfolio/pdf_template.html')
-       return HttpResponse(pdf, content_type='application/pdf')
+
 
    return render(request, 'portfolio/portfolio.html', {'customers': customers, 'investments': investments,
                                                       'stocks': stocks,
                                                       'sum_acquired_value': sum_acquired_value,'sum_recent_value': sum_recent_value,
                                                        'overall_investment_results':overall_investment_results,
                                                        'sum_current_stocks_value': sum_current_stocks_value,
-                                                       'sum_of_initial_stock_value': sum_of_initial_stock_value,
+                                                       'sum_of_initial_stock_value': sum_of_initial_stock_value,'customer': customer,
                                                        })
+
 
 
 @csrf_protect
@@ -226,8 +226,28 @@ class GeneratePdf(View):
         return HttpResponse(pdf, content_type='application/pdf')
 
 
-def portfoliopdf(request):
-    #customer = get_object_or_404(Customer, pk=pk)
-    pdf = render_to_pdf('portfolio/pdf_template.html')
-    return render(request, 'portfolio/pdf_template.html')
-    #return HttpResponse(pdf, content_type='application/pdf')
+@login_required
+def portfoliopdf(request,pk):
+   customer = get_object_or_404(Customer, pk=pk)
+   customers = Customer.objects.filter(created_date__lte=timezone.now())
+   investments =Investment.objects.filter(customer=pk)
+   stocks = Stock.objects.filter(customer=pk)
+   sum_acquired_value = Investment.objects.filter(customer=pk).aggregate(Sum('acquired_value'))['acquired_value__sum']
+   #sum_recent_value = Investment.objects.filter(customer=pk).aggregate(Sum('recent_value'))['recent_value__sum']
+   #overall_investment_results= sum_recent_value - sum_acquired_value
+   # Initialize the value of the stocks
+   #sum_current_stocks_value = 0
+   sum_of_initial_stock_value = 0
+
+   # Loop through each stock and add the value to the total
+   for stock in stocks:
+       #sum_current_stocks_value += stock.current_stock_value()
+       sum_of_initial_stock_value += stock.initial_stock_value()
+
+   c = {'customers': customers, 'investments': investments,
+        'stocks': stocks,
+        'sum_acquired_value': sum_acquired_value,
+        'sum_of_initial_stock_value': sum_of_initial_stock_value, 'customer': customer,
+            }
+   pdf = render_to_pdf('portfolio/portfoliopdf.html', c)
+   return HttpResponse(pdf, content_type='application/pdf')

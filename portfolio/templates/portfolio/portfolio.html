@@ -3,7 +3,6 @@
 {% load mathfilters %}
 {% load humanize %}
 {% block content %}
-<!DOCTYPE html>
 <link rel="stylesheet" href="//maxcdn.bootstrapcdn.com/bootstrap/3.2.0/css/bootstrap.min.css">
 <link rel="stylesheet" href="//maxcdn.bootstrapcdn.com/bootstrap/3.2.0/css/bootstrap-theme.min.css">
 <link href="//fonts.googleapis.com/css?family=Lobster&subset=latin,latin-ext" rel="stylesheet" type="text/css">
@@ -37,13 +36,7 @@
     </div>
 </div>
 <div class="row">
-    <h2 style="padding-left: 15Px">Customer Portfolio </h2>
-
-    <form method="post">
-        {% csrf_token %}
-        <a href="{% url 'portfolio:portfoliopdf'%} ">Download</a>
-
-    </form>
+    <h2 style="padding-left: 15Px">Customer Portfolio of {{customer.name}}</h2>
 
 </div>
 

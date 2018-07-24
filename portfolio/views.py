@@ -7,6 +7,13 @@ from .forms import *
 from django.db.models import Sum
 from django.views.decorators.csrf import csrf_protect
 from django.http import HttpResponseRedirect
+from rest_framework.views import APIView
+from rest_framework.response import Response
+from rest_framework import status
+from .serializers import CustomerSerializer
+from django.http import HttpResponse
+from django.views.generic import View
+from .utils import render_to_pdf
 
 
 
@@ -158,14 +165,26 @@ def portfolio(request,pk):
    sum_acquired_value = Investment.objects.filter(customer=pk).aggregate(Sum('acquired_value'))['acquired_value__sum']
    sum_recent_value = Investment.objects.filter(customer=pk).aggregate(Sum('recent_value'))['recent_value__sum']
    overall_investment_results= sum_recent_value - sum_acquired_value
-   sum_initial_stocks= 82932
-   #sum_initial_stocks = Stock.objects.filter(customer=pk).aggregate(Sum('purchase_price'))
-   #sum_stocks_value = Investment.objects.filter(customer=pk).aggregate(Sum('stock_value'))['stock_value__sum']
-   #portfolio_initial_investment = sum_stocks_val()+ sum_acquired_value
+   # Initialize the value of the stocks
+   sum_current_stocks_value = 0
+   sum_of_initial_stock_value = 0
+
+   # Loop through each stock and add the value to the total
+   for stock in stocks:
+       sum_current_stocks_value += stock.current_stock_value()
+       sum_of_initial_stock_value += stock.initial_stock_value()
+
+   if request.method == "POST":
+       pdf = render_to_pdf('portfolio/pdf_template.html')
+       return HttpResponse(pdf, content_type='application/pdf')
 
    return render(request, 'portfolio/portfolio.html', {'customers': customers, 'investments': investments,
                                                       'stocks': stocks,
-                                                      'sum_acquired_value': sum_acquired_value,'sum_recent_value': sum_recent_value,'overall_investment_results':overall_investment_results,'sum_initial_stocks':sum_initial_stocks,})
+                                                      'sum_acquired_value': sum_acquired_value,'sum_recent_value': sum_recent_value,
+                                                       'overall_investment_results':overall_investment_results,
+                                                       'sum_current_stocks_value': sum_current_stocks_value,
+                                                       'sum_of_initial_stock_value': sum_of_initial_stock_value,
+                                                       })
 
 
 @csrf_protect
@@ -185,3 +204,30 @@ def register(request):
 
 def register_success(request):
     return render(request, 'registration/success.html',  )
+
+
+# Lists all customers
+class CustomerList(APIView):
+    def get(self, request):
+        customers_json = Customer.objects.all()
+        serializer = CustomerSerializer(customers_json, many=True)
+        return Response(serializer.data)
+
+
+class GeneratePdf(View):
+    def get(self, request, *args, **kwargs):
+        data = {
+            'today': timezone.now(),
+            'amount': 39.99,
+            'customer_name': 'Cooper Mann',
+            'order_id': 1233434,
+        }
+        pdf = render_to_pdf('portfolio/pdf_template.html', data)
+        return HttpResponse(pdf, content_type='application/pdf')
+
+
+def portfoliopdf(request):
+    #customer = get_object_or_404(Customer, pk=pk)
+    pdf = render_to_pdf('portfolio/pdf_template.html')
+    return render(request, 'portfolio/pdf_template.html')
+    #return HttpResponse(pdf, content_type='application/pdf')
